@@ -148,7 +148,7 @@ public abstract class GlobalActionsLayout extends MultiListLayout {
     }
 
     @Override
-    protected ViewGroup getListView() {
+    public ViewGroup getListView() {
         return findViewById(android.R.id.list);
     }
 

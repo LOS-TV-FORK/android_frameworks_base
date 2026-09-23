@@ -42,7 +42,7 @@ public abstract class MultiListLayout extends LinearLayout {
 
     protected abstract ViewGroup getSeparatedView();
 
-    protected abstract ViewGroup getListView();
+    public abstract ViewGroup getListView();
 
     /**
      * Sets the divided view, which may have a differently-colored background.

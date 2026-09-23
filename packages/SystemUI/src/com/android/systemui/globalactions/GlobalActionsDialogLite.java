@@ -1877,6 +1877,12 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
         mMetricsLogger.visible(MetricsEvent.POWER_MENU);
         mUiEventLogger.log(GlobalActionsEvent.GA_POWER_MENU_OPEN);
         mInteractor.onShown();
+
+        // D-pad navigation needs an actual focused view
+        final ViewGroup list = ((ActionsDialogLite) dialog).mGlobalActionsLayout.getListView();
+        if (list != null) {
+            list.requestFocus();
+        }
     }
 
     /**

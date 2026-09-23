@@ -74,7 +74,7 @@ public class GlobalActionsGridLayout extends GlobalActionsLayout {
     }
 
     @Override
-    protected ListGridLayout getListView() {
+    public ListGridLayout getListView() {
         return (ListGridLayout) super.getListView();
     }
 

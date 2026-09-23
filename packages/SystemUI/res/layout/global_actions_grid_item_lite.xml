@@ -22,6 +22,9 @@
     android:gravity="center"
     android:layout_gravity="center"
     android:orientation="vertical"
+    android:focusable="true"
+    android:background="@drawable/global_actions_item_focus"
+    android:padding="4mm"
     android:stateListAnimator="@anim/control_state_list_animator">
         <ImageView
             android:id="@*android:id/icon"
