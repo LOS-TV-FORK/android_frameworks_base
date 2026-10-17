@@ -4161,9 +4161,8 @@ public class Activity extends ContextThemeWrapper
      * it will set up the dispatch to call {@link #onKeyUp} where the action
      * will be performed; for earlier applications, it will perform the
      * action immediately in on-down, as those versions of the platform
-     * behaved. This implementation will also take care of {@link KeyEvent#KEYCODE_ESCAPE}
-     * by finishing the activity if it would be closed by touching outside
-     * of it.
+     * behaved. This implementation also treats {@link KeyEvent#KEYCODE_ESCAPE}
+     * exactly like {@link KeyEvent#KEYCODE_BACK} (LOS-TV appliance behavior).
      *
      * <p>Other additional default key handling may be performed
      * if configured with {@link #setDefaultKeyMode}.
@@ -4175,19 +4174,16 @@ public class Activity extends ContextThemeWrapper
      * @see android.view.KeyEvent
      */
     public boolean onKeyDown(int keyCode, KeyEvent event)  {
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
+        // LOS-TV: ESCAPE acts as BACK everywhere (TV appliance behavior).
+        // Layouts already map ESC->BACK keycode, this covers exotic devices
+        // that still deliver KEYCODE_ESCAPE.
+        if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE) {
             if (getApplicationInfo().targetSdkVersion
                     >= Build.VERSION_CODES.ECLAIR) {
                 event.startTracking();
             } else {
                 onBackPressed();
             }
-            return true;
-        }
-
-        if (keyCode == KeyEvent.KEYCODE_ESCAPE && mWindow.shouldCloseOnTouchOutside()) {
-            event.startTracking();
-            finish();
             return true;
         }
 
@@ -4277,7 +4273,8 @@ public class Activity extends ContextThemeWrapper
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         int sdkVersion = getApplicationInfo().targetSdkVersion;
         if (sdkVersion >= Build.VERSION_CODES.ECLAIR) {
-            if (keyCode == KeyEvent.KEYCODE_BACK
+            // LOS-TV: ESCAPE acts as BACK everywhere (see onKeyDown).
+            if ((keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE)
                     && event.isTracking()
                     && !event.isCanceled()
                     && mDefaultBackCallback == null) {

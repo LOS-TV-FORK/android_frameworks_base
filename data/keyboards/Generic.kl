@@ -20,7 +20,11 @@
 # a new key layout file with the required keyboard configuration.
 #
 
-key 1     ESCAPE
+# LOS-TV: ESC acts as BACK on all keyboards (TV appliance behavior).
+# USB HID keyboards report ESC as usage 0x70029 (not scancode 1):
+# KeyLayoutMap prefers the usage table, so both entries are needed.
+key 1     BACK
+key usage 0x70029 BACK
 key 2     1
 key 3     2
 key 4     3

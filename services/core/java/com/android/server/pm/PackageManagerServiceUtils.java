@@ -470,6 +470,56 @@ public class PackageManagerServiceUtils {
     }
 
     /**
+     * LOS-TV: allow com.google.android.gms to migrate between official Google signing
+     * keys (e.g. phone MTG build key <-> TV Pano key). Scoped to this one package and
+     * to well-known Google certificates only; everything else keeps the strict check.
+     */
+    private static final Set<String> GOOGLE_GMS_ALLOWED_CERTS = new android.util.ArraySet<>(
+            Arrays.asList(
+                    // bd32
+                    "7ce83c1b71f3d572fed04c8d40c5cb10ff75e6d87d9df6fbd53f0468c2905053",
+                    // MTG GMS key (2169)
+                    "5f2391277b1dbd489000467e4c2fa6af802430080457dce2f618992e9dfb5402",
+                    // 3891
+                    "f0fd6c5b410f25cb25c3b53346c8972fae30f8ee7411df910480ad6b2d60db83"));
+
+    private static boolean isGoogleCrossKeyGmsUpdate(String packageName,
+            SigningDetails installed, SigningDetails parsed) {
+        if (!"com.google.android.gms".equals(packageName)) {
+            return false;
+        }
+        return allCertsKnownGoogle(installed) && allCertsKnownGoogle(parsed);
+    }
+
+    private static boolean allCertsKnownGoogle(SigningDetails details) {
+        if (details == SigningDetails.UNKNOWN
+                || details.getSignatures() == null
+                || details.getSignatures().length == 0) {
+            return false;
+        }
+        try {
+            final java.security.MessageDigest digest =
+                    java.security.MessageDigest.getInstance("SHA-256");
+            for (android.content.pm.Signature sig : details.getSignatures()) {
+                digest.reset();
+                final byte[] cert = sig.toByteArray();
+                final byte[] hash = digest.digest(cert);
+                final StringBuilder sb = new StringBuilder(hash.length * 2);
+                for (byte b : hash) {
+                    sb.append(Character.forDigit((b >> 4) & 0xF, 16));
+                    sb.append(Character.forDigit(b & 0xF, 16));
+                }
+                if (!GOOGLE_GMS_ALLOWED_CERTS.contains(sb.toString())) {
+                    return false;
+                }
+            }
+        } catch (java.security.NoSuchAlgorithmException e) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Verifies that signatures match.
      * @returns {@code true} if the compat signatures were matched; otherwise, {@code false}.
      * @throws PackageManagerException if the signatures did not match.
@@ -515,6 +565,11 @@ public class PackageManagerServiceUtils {
                                         parsedSignatures,
                                         pkgSetting.getSigningDetails(),
                                         SigningDetails.CertCapabilities.ROLLBACK);
+            }
+
+            if (!match && isGoogleCrossKeyGmsUpdate(packageName,
+                    pkgSetting.getSigningDetails(), parsedSignatures)) {
+                match = true;
             }
 
             if (!match && isRollback) {

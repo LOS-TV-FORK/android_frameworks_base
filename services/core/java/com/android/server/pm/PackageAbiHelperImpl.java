@@ -386,9 +386,13 @@ final class PackageAbiHelperImpl implements PackageAbiHelper {
                 // Force the match for these cases
                 // 1. pkg.getTargetSdkVersion >= Build.VERSION_CODES.VANILLA_ICE_CREAM
                 // 2. cpuAbiOverride is null. If it is non-null, it is set via shell for testing
+                // LOS-TV: system apps are exempt from forceMatch. The system integrator
+                // is responsible for ABI coverage (e.g. ARM-only TV GMS running via
+                // NDK translation on x86_64). User apps keep the strict check.
                 final boolean forceMatch =
                         pkg.getTargetSdkVersion() >= Build.VERSION_CODES.VANILLA_ICE_CREAM
-                        && cpuAbiOverride == null;
+                        && cpuAbiOverride == null
+                        && !isSystemApp;
 
                 String[] supported32BitAbis = forceMatch ? getNativelySupported32BitAbis()
                         : Build.SUPPORTED_32_BIT_ABIS;

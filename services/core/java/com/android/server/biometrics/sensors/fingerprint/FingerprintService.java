@@ -45,6 +45,7 @@ import android.hardware.biometrics.IInvalidationCallback;
 import android.hardware.biometrics.ITestSession;
 import android.hardware.biometrics.ITestSessionCallback;
 import android.hardware.biometrics.fingerprint.IFingerprint;
+import android.hardware.biometrics.fingerprint.virtualhal.IVirtualHal;
 import android.hardware.biometrics.fingerprint.PointerContext;
 import android.hardware.biometrics.fingerprint.SensorProps;
 import android.hardware.fingerprint.Fingerprint;
@@ -1143,7 +1144,13 @@ public class FingerprintService extends SystemService {
             // Now, the virtual hal is registered with IVirtualHal interface and it is also
             //   moved from vendor to system_ext partition without a device manifest. So
             //   if the old vhal is not declared, add here.
-            a = ArrayUtils.appendElement(String.class, a, "virtual");
+            // LOS-TV: only add it when a virtual HAL is actually declared. Otherwise
+            //   registration blocks forever in waitForService on sensorless devices,
+            //   spamming the log every second.
+            final String[] vhal = ServiceManager.getDeclaredInstances(IVirtualHal.DESCRIPTOR);
+            if (vhal != null && vhal.length > 0) {
+                a = ArrayUtils.appendElement(String.class, a, "virtual");
+            }
         }
         Slog.i(TAG, "After:getDeclaredInstances: a.length=" + a.length);
         return a;
