@@ -339,6 +339,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     // a button with no other long press action is a poor way to find. This mirrors the long
     // press shut down, always with the confirmation dialog.
     static final int SHORT_PRESS_POWER_SHUT_OFF = 10;
+    // LOS-TV: the power menu was only reachable from the long press, and from the launcher
+    // shade. On a device whose long press is free to be something else, a plain press is the
+    // place someone looks for "what can this button do".
+    static final int SHORT_PRESS_POWER_GLOBAL_ACTIONS = 11;
 
     // must match: config_LongPressOnPowerBehavior in config.xml
     // The config value can be overridden using Settings.Global.POWER_BUTTON_LONG_PRESS
@@ -1289,7 +1293,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
      */
     private int getResolvedShortPressOnPowerBehavior() {
         final int userBehavior = getUserPowerBehavior(Settings.Global.POWER_BUTTON_SHORT_PRESS,
-                SHORT_PRESS_POWER_SHUT_OFF);
+                SHORT_PRESS_POWER_GLOBAL_ACTIONS);
         if (userBehavior != NO_USER_BEHAVIOR) {
             return userBehavior;
         }
@@ -1435,6 +1439,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     }
                     sendCloseSystemWindows(SYSTEM_DIALOG_REASON_GLOBAL_ACTIONS);
                     mWindowManagerFuncs.shutdown(/* confirm= */ true);
+                    break;
+                case SHORT_PRESS_POWER_GLOBAL_ACTIONS:
+                    // The same dialog the long press opens and the launcher shade opens, just
+                    // reachable without holding the button down.
+                    showGlobalActions();
                     break;
             }
         }
@@ -7600,6 +7609,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 return "SHORT_PRESS_POWER_CLOSE_IME_OR_GO_HOME";
             case SHORT_PRESS_POWER_SHUT_OFF:
                 return "SHORT_PRESS_POWER_SHUT_OFF";
+            case SHORT_PRESS_POWER_GLOBAL_ACTIONS:
+                return "SHORT_PRESS_POWER_GLOBAL_ACTIONS";
             default:
                 return Integer.toString(behavior);
         }
