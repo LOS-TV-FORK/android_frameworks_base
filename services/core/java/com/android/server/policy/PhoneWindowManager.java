@@ -1276,6 +1276,21 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
     }
 
+    /**
+     * The short press action, which the user may have chosen in system settings.
+     *
+     * <p>Same reasoning as the long press: the settings key exists but was never read, so the
+     * resource default was the only thing that could ever happen.
+     */
+    private int getResolvedShortPressOnPowerBehavior() {
+        final int userBehavior = getUserPowerBehavior(Settings.Global.POWER_BUTTON_SHORT_PRESS,
+                SHORT_PRESS_POWER_DREAM_OR_AWAKE_OR_SLEEP);
+        if (userBehavior != NO_USER_BEHAVIOR) {
+            return userBehavior;
+        }
+        return mShortPressOnPowerBehavior;
+    }
+
     @VisibleForTesting
     void powerPress(long eventTime, int count, int displayId) {
         // SideFPS still needs to know about suppressed power buttons, in case it needs to block
@@ -1300,7 +1315,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                         + " count="
                         + count
                         + " mShortPressOnPowerBehavior="
-                        + mShortPressOnPowerBehavior);
+                        + getResolvedShortPressOnPowerBehavior());
 
         if (count == 2) {
             powerMultiPressAction(eventTime, interactive, mDoublePressOnPowerBehavior);
@@ -1309,7 +1324,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         } else if (count > 3 && count <= getMaxMultiPressPowerCount()) {
             Slog.d(TAG, "No behavior defined for power press count " + count);
         } else if (count == 1 && shouldHandleShortPressPowerAction(interactive, eventTime)) {
-            switch (mShortPressOnPowerBehavior) {
+            switch (getResolvedShortPressOnPowerBehavior()) {
                 case SHORT_PRESS_POWER_NOTHING:
                     break;
                 case SHORT_PRESS_POWER_GO_TO_SLEEP:
@@ -1457,9 +1472,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
      */
     private void attemptToDreamOrAwakeFromShortPowerButtonPress(
             boolean isScreenOn, boolean awakeWhenDream, Runnable noDreamAction) {
-        if (mShortPressOnPowerBehavior != SHORT_PRESS_POWER_DREAM_OR_SLEEP
-                && mShortPressOnPowerBehavior != SHORT_PRESS_POWER_HUB_OR_DREAM_OR_SLEEP
-                && mShortPressOnPowerBehavior != SHORT_PRESS_POWER_DREAM_OR_AWAKE_OR_SLEEP) {
+        final int shortPressBehavior = getResolvedShortPressOnPowerBehavior();
+        if (shortPressBehavior != SHORT_PRESS_POWER_DREAM_OR_SLEEP
+                && shortPressBehavior != SHORT_PRESS_POWER_HUB_OR_DREAM_OR_SLEEP
+                && shortPressBehavior != SHORT_PRESS_POWER_DREAM_OR_AWAKE_OR_SLEEP) {
             // If the power button behavior isn't one that should be able to trigger the dream, give
             // up.
             noDreamAction.run();
@@ -1842,9 +1858,44 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         return false;
     }
 
+    /** Returned when the user has not picked an action and the resource default should be used. */
+    private static final int NO_USER_BEHAVIOR = -1;
+
+    /**
+     * Reads the action the user picked for the power button in system settings.
+     *
+     * <p>{@link Settings.Global#POWER_BUTTON_LONG_PRESS} and its short press counterpart have
+     * always been documented as overrides for the resource defaults, and the keys are already
+     * declared and observed, but nothing ever read them: the behavior came straight from
+     * {@code config_longPressOnPowerBehavior} and friends, so writing the setting did nothing.
+     * This is the read that was missing.
+     *
+     * <p>Read on each press rather than cached. A press is rare and the resolver is already open,
+     * so this costs nothing measurable, and it means a change in settings takes effect on the next
+     * press without waiting for a reboot.
+     *
+     * @return the chosen behavior, or {@link #NO_USER_BEHAVIOR} to fall back to the resource.
+     */
+    private int getUserPowerBehavior(String key, int maxValue) {
+        final int value = Settings.Global.getInt(mContext.getContentResolver(), key,
+                NO_USER_BEHAVIOR);
+        if (value < 0 || value > maxValue) {
+            // Out of range means nobody chose yet, or a stale value from another platform.
+            return NO_USER_BEHAVIOR;
+        }
+        return value;
+    }
+
     private int getResolvedLongPressOnPowerBehavior() {
         if (FactoryTest.isLongPressOnPowerOffEnabled()) {
             return LONG_PRESS_POWER_SHUT_OFF_NO_CONFIRM;
+        }
+        // An explicit choice by the user outranks the built in defaults, otherwise they would be
+        // offered a choice that quietly does nothing.
+        final int userBehavior = getUserPowerBehavior(Settings.Global.POWER_BUTTON_LONG_PRESS,
+                LONG_PRESS_POWER_TORCH);
+        if (userBehavior != NO_USER_BEHAVIOR) {
+            return userBehavior;
         }
         if (mTorchLongPressPowerEnabled && (!isScreenOn() || isDozeMode() || mTorchEnabled)) {
             return LONG_PRESS_POWER_TORCH;
