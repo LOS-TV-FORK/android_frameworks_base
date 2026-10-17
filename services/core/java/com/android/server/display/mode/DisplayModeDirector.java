@@ -390,8 +390,12 @@ public class DisplayModeDirector {
                 }
             }
 
+            // An explicitly user-picked size overrules the group policy:
+            // switching resolution inherently changes mode groups.
             boolean allowGroupSwitching =
-                    mModeSwitchingType == DisplayManager.SWITCHING_TYPE_ACROSS_AND_WITHIN_GROUPS;
+                    mModeSwitchingType == DisplayManager.SWITCHING_TYPE_ACROSS_AND_WITHIN_GROUPS
+                            || votes.get(Vote.PRIORITY_USER_SETTING_DISPLAY_PREFERRED_SIZE)
+                                    != null;
 
             // Some external displays physical refresh rate modes are slightly above 60hz.
             // SurfaceFlinger will not enable these display modes unless it is configured to allow

@@ -2895,12 +2895,17 @@ public final class DisplayManagerService extends SystemService {
                         + "be greater than 0 when setting the global user preferred display mode.");
             }
             DisplayDevice displayDevice = getDeviceForDisplayLocked(displayId);
-            if (displayDevice == null) {
+            // A global request has no device of its own; store it globally
+            // and apply to every display instead of silently dropping it.
+            if (displayDevice == null && displayId != Display.INVALID_DISPLAY) {
                 return;
             }
-            if (!mFlags.isModeSwitchWithoutSavingEnabled()) {
-                storeMode = true;
-            }
+            // Honor the caller's storeMode as-is. The upstream
+            // mode_switch_without_saving gate is fixed read-only OFF on this
+            // product and would otherwise force every temporary (confirm-dialog
+            // preview) vote into persistent store, bricking boot when the new
+            // mode kills video. This product always wants the non-persisting
+            // behavior: persist happens only via explicit OK (storeMode=true).
             if (storeMode) {
                 storeModeLocked(displayId, mode);
             }
