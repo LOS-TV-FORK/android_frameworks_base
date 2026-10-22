@@ -2615,6 +2615,20 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
         return pm.getDefaultActivityIcon();
     }
 
+    /**
+     * @hide
+     *
+     * <p>Android TV asks for a banner when it draws an app in the apps row. Apps that do not
+     * ship one would otherwise be shown with a generic icon, so one is drawn from their icon
+     * instead of returning null. The banner is expected to live in the app itself, which is why
+     * this is a drawable rather than a resource: the app cannot be modified here.
+     */
+    @Override
+    @android.ravenwood.annotation.RavenwoodThrow(blockedBy = android.content.res.Resources.class)
+    protected Drawable loadDefaultBanner(PackageManager pm) {
+        return GeneratedTvBanner.get(this, pm);
+    }
+
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
     @android.ravenwood.annotation.RavenwoodThrow(blockedBy = PackageManager.class)
     private boolean isPackageUnavailable(PackageManager pm) {

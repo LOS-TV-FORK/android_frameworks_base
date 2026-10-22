@@ -1215,8 +1215,18 @@ public class ComputerEngine implements Computer {
             String ephemeralPkgName, boolean allowDynamicSplits, int filterCallingUid,
             boolean resolveForStart, int userId, Intent intent) {
         final boolean blockInstant = intent.isWebIntent() && areWebInstantAppsDisabled(userId);
+        // Leanback categories we added to phone and tablet apps stay in the package so that
+        // resolution and launching agree with each other. They are only hidden from launchers
+        // while the developer setting is off, which takes effect on the next query.
+        final boolean hideInjectedLeanback = !LeanbackLauncherInjector.isInjectionEnabled();
         for (int i = resolveInfos.size() - 1; i >= 0; i--) {
             final ResolveInfo info = resolveInfos.get(i);
+            if (hideInjectedLeanback && info.activityInfo != null
+                    && LeanbackLauncherInjector.isInjected(info.activityInfo.packageName,
+                            info.activityInfo.name)) {
+                resolveInfos.remove(i);
+                continue;
+            }
             // remove locally resolved instant app web results when disabled
             if (info.isInstantAppAvailable && blockInstant) {
                 resolveInfos.remove(i);

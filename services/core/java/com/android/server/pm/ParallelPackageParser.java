@@ -165,7 +165,11 @@ class ParallelPackageParser {
     protected ParsedPackage parsePackage(File scanFile, int parseFlags)
             throws PackageManagerException {
         try {
-            return mPackageParser.parsePackage(scanFile, parseFlags, true);
+            final ParsedPackage pkg = mPackageParser.parsePackage(scanFile, parseFlags, true);
+            // Let phone and tablet apps answer to the Leanback launcher category while the
+            // package is still mutable, so TV launchers list them without the APK being touched.
+            LeanbackLauncherInjector.inject(pkg);
+            return pkg;
         } catch (PackageParserException e) {
             throw new PackageManagerException(e.error, e.getMessage(), e);
         }
