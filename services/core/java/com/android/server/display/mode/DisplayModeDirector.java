@@ -206,6 +206,12 @@ public class DisplayModeDirector {
         mDisplayDeviceConfigProvider = displayDeviceConfigProvider;
         mContext = context;
         mHandler = new DisplayModeDirectorHandler(handler.getLooper());
+        // Seed the default switching type from a config resource so that a product can
+        // decide whether apps may switch the refresh rate before the user ever persists
+        // a MATCH_CONTENT_FRAME_RATE value (upstream hard-codes WITHIN_GROUPS).
+        mModeSwitchingType = context.getResources().getInteger(
+                com.android.internal.R.integer.config_modeSwitchingTypeDefault);
+
         mInjector = injector;
         mVotesStatsReporter = injector.getVotesStatsReporter();
         mSupportedModesByDisplay = new SparseArray<>();
