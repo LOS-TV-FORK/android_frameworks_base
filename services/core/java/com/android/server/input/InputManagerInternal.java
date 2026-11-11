@@ -91,6 +91,16 @@ public abstract class InputManagerInternal {
     public abstract void toggleCapsLock(int deviceId);
 
     /**
+     * Switches the keyboard layout of input device with specific id to the next entry of the
+     * rotation list (see KeyboardLayoutManager).
+     *
+     * @param deviceId The id of input device.
+     * @return the label of the newly selected layout, or null if it could not be switched.
+     */
+    @Nullable
+    public abstract String toggleKeyboardLayout(int deviceId);
+
+    /**
      * Set whether the input stack should deliver pulse gesture events when the device is asleep.
      */
     public abstract void setPulseGestureEnabled(boolean enabled);

@@ -4034,6 +4034,55 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 }
 
                 return true;
+            case KeyEvent.KEYCODE_LANGUAGE_SWITCH:
+                // Physical keyboard layout rotation (e.g. English/Russian) hotkey. Only
+                // handle events coming from a real (non virtual) full keyboard; otherwise
+                // let the event pass (it may be used to switch IME subtypes).
+                final InputDevice languageSwitchDevice = event.getDevice();
+                if (virtualKey || languageSwitchDevice == null
+                        || languageSwitchDevice.isVirtual()
+                        || !languageSwitchDevice.isFullKeyboard()) {
+                    break;
+                }
+                if (down && repeatCount == 0 && mInputManagerInternal != null) {
+                    final String keyboardLayoutLabel =
+                            mInputManagerInternal.toggleKeyboardLayout(event.getDeviceId());
+                    if (keyboardLayoutLabel != null) {
+                        Toast.makeText(
+                                mContext,
+                                UiThread.get().getLooper(),
+                                keyboardLayoutLabel,
+                                Toast.LENGTH_SHORT)
+                                .show();
+                    }
+                }
+                return true;
+            case KeyEvent.KEYCODE_SPACE: {
+                // Ctrl+Space switches the keyboard layout of the source physical keyboard
+                // (e.g. English/Russian). Without Ctrl, space must be handled by apps as usual.
+                if (virtualKey) {
+                    break;
+                }
+                final InputDevice spaceSwitchDevice = event.getDevice();
+                if (spaceSwitchDevice == null || spaceSwitchDevice.isVirtual()
+                        || !spaceSwitchDevice.isFullKeyboard()
+                        || (event.getMetaState() & KeyEvent.META_CTRL_MASK) == 0) {
+                    break;
+                }
+                if (down && repeatCount == 0 && mInputManagerInternal != null) {
+                    final String keyboardLayoutLabel =
+                            mInputManagerInternal.toggleKeyboardLayout(event.getDeviceId());
+                    if (keyboardLayoutLabel != null) {
+                        Toast.makeText(
+                                mContext,
+                                UiThread.get().getLooper(),
+                                keyboardLayoutLabel,
+                                Toast.LENGTH_SHORT)
+                                .show();
+                    }
+                }
+                return true;
+            }
             case KeyEvent.KEYCODE_VOLUME_UP:
             case KeyEvent.KEYCODE_VOLUME_DOWN:
             case KeyEvent.KEYCODE_VOLUME_MUTE:

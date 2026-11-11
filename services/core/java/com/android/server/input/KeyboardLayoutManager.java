@@ -554,6 +554,106 @@ class KeyboardLayoutManager implements InputManager.InputDeviceListener {
         }
     }
 
+    private static final String KEYBOARD_LAYOUT_ROTATION_SETTING = "keyboard_layout_rotation";
+
+    // Default rotation, provided by the system InputDevices package (these are the layout
+    // "name" attributes from its keyboard_layouts.xml).
+    private static final String[] DEFAULT_KEYBOARD_LAYOUT_ROTATION = {
+            "keyboard_layout_english_us",
+            "keyboard_layout_russian"
+    };
+
+    /**
+     * Switches the keyboard layout of the given physical keyboard device to the next entry of
+     * the rotation list and reconfigures the device.
+     *
+     * <p>The rotation list is read from the Global setting "keyboard_layout_rotation" as a
+     * comma-separated list of keyboard layout names or descriptors (for example
+     * "keyboard_layout_english_us,keyboard_layout_russian"). When the setting is empty, the
+     * default rotation of English (US) and Russian layouts provided by the system
+     * InputDevices package is used.
+     *
+     * @return the label of the newly selected layout, or null if nothing was switched.
+     */
+    @Nullable
+    public String toggleKeyboardLayoutForDevice(int deviceId) {
+        final InputDevice inputDevice = getInputDevice(deviceId);
+        if (inputDevice == null || inputDevice.isVirtual() || !inputDevice.isFullKeyboard()) {
+            return null;
+        }
+        final KeyboardIdentifier keyboardIdentifier = new KeyboardIdentifier(inputDevice);
+        final List<KeyboardLayout> rotation = getRotationLayouts();
+        if (rotation.size() < 2) {
+            return null;
+        }
+        final String currentDescriptor;
+        synchronized (mImeInfoLock) {
+            currentDescriptor = getKeyboardLayoutForInputDeviceInternal(keyboardIdentifier,
+                    mCurrentImeInfo).getLayoutDescriptor();
+            int index = -1;
+            if (currentDescriptor != null) {
+                for (int i = 0, size = rotation.size(); i < size; i++) {
+                    if (rotation.get(i).getDescriptor().equals(currentDescriptor)) {
+                        index = i;
+                        break;
+                    }
+                }
+            }
+            final KeyboardLayout next;
+            if (index == -1) {
+                next = rotation.get(0).getDescriptor().equals(currentDescriptor)
+                        ? rotation.get(1) : rotation.get(0);
+            } else {
+                next = rotation.get((index + 1) % rotation.size());
+            }
+            if (next.getDescriptor().equals(currentDescriptor)) {
+                return null;
+            }
+            if (DEBUG) {
+                Slog.d(TAG, "toggleKeyboardLayoutForDevice() device=" + deviceId
+                        + " current=" + currentDescriptor
+                        + " next=" + next.getDescriptor());
+            }
+            setKeyboardLayoutForInputDeviceInternal(keyboardIdentifier, GLOBAL_OVERRIDE_KEY,
+                    next.getDescriptor());
+            return next.getLabel();
+        }
+    }
+
+    private List<KeyboardLayout> getRotationLayouts() {
+        final String setting = Settings.Global.getString(mContext.getContentResolver(),
+                KEYBOARD_LAYOUT_ROTATION_SETTING);
+        final List<String> wanted = new ArrayList<>();
+        if (!TextUtils.isEmpty(setting)) {
+            for (String item : setting.split(",")) {
+                if (!TextUtils.isEmpty(item)) {
+                    wanted.add(item.trim());
+                }
+            }
+        }
+        if (wanted.isEmpty()) {
+            for (String item : DEFAULT_KEYBOARD_LAYOUT_ROTATION) {
+                wanted.add(item);
+            }
+        }
+        final List<KeyboardLayout> result = new ArrayList<>();
+        visitAllKeyboardLayouts((resources, keyboardLayoutResId, layout) -> {
+            final KeyboardLayoutDescriptor descriptor =
+                    KeyboardLayoutDescriptor.parse(layout.getDescriptor());
+            if (descriptor == null) {
+                return;
+            }
+            for (String want : wanted) {
+                if (descriptor.keyboardLayoutName.equals(want)
+                        || layout.getDescriptor().equals(want)) {
+                    result.add(layout);
+                    break;
+                }
+            }
+        });
+        return result;
+    }
+
     @AnyThread
     public KeyboardLayout[] getKeyboardLayoutListForInputDevice(InputDeviceIdentifier identifier,
             @UserIdInt int userId, @NonNull InputMethodInfo imeInfo,

@@ -3782,6 +3782,11 @@ public class InputManagerService extends IInputManager.Stub
         }
 
         @Override
+        public String toggleKeyboardLayout(int deviceId) {
+            return mKeyboardLayoutManager.toggleKeyboardLayoutForDevice(deviceId);
+        }
+
+        @Override
         public void setPulseGestureEnabled(boolean enabled) {
             if (mDoubleTouchGestureEnableFile != null) {
                 FileWriter writer = null;
