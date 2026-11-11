@@ -29,6 +29,7 @@ import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.TextUtils;
+import android.os.SystemProperties;
 import android.util.DisplayMetrics;
 import android.util.LruCache;
 
@@ -125,10 +126,16 @@ final class GeneratedTvBanner {
     private GeneratedTvBanner() {}
 
     /**
-     * Returns a banner drawn from the app icon, or {@code null} when no icon can be loaded.
+     * Returns a banner drawn from the app icon, or {@code null} when no icon can be loaded or
+     * when the developer setting that lets the system draw these banners is turned off. The
+     * apps themselves are not affected by that setting; only this generated banner is, so a
+     * launcher can then draw whatever it draws for an app without a banner.
      */
     static Drawable get(ApplicationInfo info, PackageManager pm) {
         if (info == null || pm == null) {
+            return null;
+        }
+        if ("0".equals(SystemProperties.get("persist.sys.los.leanback_inject", "1"))) {
             return null;
         }
         final String key = info.packageName;

@@ -19,7 +19,6 @@ package com.android.server.pm;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
-import android.os.SystemProperties;
 import android.util.Log;
 
 import com.android.internal.pm.parsing.pkg.AndroidPackageLegacyUtils;
@@ -30,8 +29,6 @@ import com.android.internal.pm.pkg.component.ParsedIntentInfoImpl;
 import com.android.server.pm.pkg.AndroidPackage;
 
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Makes apps that were written for a phone or a tablet show up in TV launchers.
@@ -51,18 +48,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * are launched by other parts of the system, and putting them on the TV home screen would only
  * be noise.
  *
- * <p>The generated category is remembered so that the developer setting can hide those entries
- * again without a reboot; see {@link #isInjectionEnabled()}.
+ * <p>The generated category is permanent, so the apps a launcher lists never depend on a
+ * switch being in one position or the other at scan time. The developer setting behind
+ * {@link #PROPERTY} only controls the banner the system draws for those apps; see
+ * {@code android.content.pm.GeneratedTvBanner}.
  */
 public final class LeanbackLauncherInjector {
 
-    /** Toggled from the developer options. */
+    /** Toggled from the developer options; read by {@code GeneratedTvBanner}. */
     public static final String PROPERTY = "persist.sys.los.leanback_inject";
 
     private static final String TAG = "LeanbackLauncherInjector";
-
-    /** Component names of the activities that were given the category by us. */
-    private static final Set<String> sInjected = ConcurrentHashMap.newKeySet();
 
     private LeanbackLauncherInjector() {}
 
@@ -72,7 +68,7 @@ public final class LeanbackLauncherInjector {
      * @param pkg the freshly parsed package, still mutable
      */
     public static void inject(@android.annotation.Nullable AndroidPackage pkg) {
-        if (pkg == null || !isInjectionEnabled()) {
+        if (pkg == null) {
             return;
         }
         // Preinstalled apps are part of the system image and were given the categories their
@@ -92,22 +88,6 @@ public final class LeanbackLauncherInjector {
                 addLeanbackCategory((ParsedActivityImpl) activity, pkg.getPackageName());
             }
         }
-    }
-
-    /**
-     * Whether the injected categories may be listed by launchers right now. Turning this off
-     * hides the entries again immediately, without a reboot and without touching the parsed
-     * packages, which keeps the escape hatch usable when the injection misbehaves.
-     */
-    public static boolean isInjectionEnabled() {
-        return !"0".equals(SystemProperties.get(PROPERTY, "1"));
-    }
-
-    /** Whether the category of the given activity was added by us rather than by its author. */
-    public static boolean isInjected(@android.annotation.Nullable String packageName,
-            @android.annotation.Nullable String className) {
-        return packageName != null && className != null
-                && sInjected.contains(packageName + "/" + className);
     }
 
     private static boolean hasLeanbackActivity(List<ParsedActivity> activities) {
@@ -155,9 +135,8 @@ public final class LeanbackLauncherInjector {
         filter.addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
         activity.addIntent(leanback);
 
-        final String className = activity.getComponentName() != null
-                ? activity.getComponentName().getClassName() : activity.getName();
-        sInjected.add(packageName + "/" + className);
-        Log.i(TAG, "Added a Leanback category to " + packageName + "/" + className);
+        Log.i(TAG, "Added a Leanback category to " + packageName + "/"
+                + (activity.getComponentName() != null
+                        ? activity.getComponentName().getClassName() : activity.getName()));
     }
 }
