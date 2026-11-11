@@ -62,6 +62,47 @@ final class PackageAbiHelperImpl implements PackageAbiHelper {
     @Nullable
     private static String[] sNativelySupported64BitAbis = null;
 
+    // LOS-TV: packages that may provide the WebView implementation.
+    private static final String[] WEBVIEW_PROVIDER_PACKAGES = {
+            "com.android.webview",
+            "com.google.android.webview",
+    };
+
+    /**
+     * LOS-TV: decide whether android:use32bitAbi should be honoured for this package.
+     *
+     * <p>The Chromium WebView APK we ship is built with use32bitAbi="true", so its
+     * primaryCpuAbi becomes the 32-bit one. WebViewZygote starts the single device-wide
+     * webview_zygote from that ABI, which makes <em>every</em> WebView renderer on the
+     * device 32-bit. Chromium's i386 seccomp-bpf policy does not allow __NR_shutdown
+     * (sandbox/linux/seccomp-bpf-helpers/syscall_sets.cc has no i386 case), so a renderer
+     * that closes a socket - a page using WebSockets, for instance - dies with SIGSYS and
+     * takes the app down with it.
+     *
+     * <p>Prefer the 64-bit ABI for the WebView package when the device supports it. 32-bit
+     * apps are unaffected: the APK is a fat package, so they still get lib/x86 through
+     * their own (32-bit) process and secondaryCpuAbi.
+     */
+    private static boolean is32BitAbiPreferred(AndroidPackage pkg,
+            boolean systemSupports64BitAbi) {
+        if (!pkg.is32BitAbiPreferred()) {
+            return false;
+        }
+        if (!systemSupports64BitAbi) {
+            return true;
+        }
+        final String packageName = pkg.getPackageName();
+        for (String webviewPackage : WEBVIEW_PROVIDER_PACKAGES) {
+            if (webviewPackage.equals(packageName)) {
+                Slog.i(PackageManagerService.TAG,
+                        "Ignoring android:use32bitAbi for WebView package " + packageName
+                        + "; the renderer must be 64-bit");
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static String calculateBundledApkRoot(final String codePathString) {
         final File codePath = new File(codePathString);
         final File codeRoot;
@@ -458,7 +499,8 @@ final class PackageAbiHelperImpl implements PackageAbiHelper {
                 if (abi32 >= 0) {
                     final String abi = supported32BitAbis[abi32];
                     if (abi64 >= 0) {
-                        if (pkg.is32BitAbiPreferred()) {
+                        // LOS-TV: see is32BitAbiPreferred().
+                        if (is32BitAbiPreferred(pkg, systemSupports64BitAbi)) {
                             secondaryCpuAbi = primaryCpuAbi;
                             primaryCpuAbi = abi;
                         } else {
