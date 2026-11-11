@@ -171,10 +171,10 @@ class TaskSnapshotController extends AbsAppSnapshotController<Task, TaskSnapshot
                 snapshot.addReference(initialUsage);
             }
             if (!task.isActivityTypeHome()) {
-                final var updateCacheFunction = mOnlyCacheLowResSnapshot
-                        ? updateLowResToCacheFunction(task, snapshot.getId()) : null;
-                mPersister.persistSnapshotAndConvert(
-                        task.mTaskId, task.mUserId, snapshot, updateCacheFunction);
+                // x86_64 TV tree: no disk persistence at all — snapshots are kept in the
+                // RAM cache only (selected by the launcher's recents previews feature).
+                // mPersister.persistSnapshotAndConvert(task.mTaskId, task.mUserId,
+                //         snapshot, updateCacheFunction);
                 task.onSnapshotChanged(snapshot);
             }
         });

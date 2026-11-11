@@ -143,7 +143,12 @@ abstract class AbsAppSnapshotController<TYPE extends WindowContainer<?>,
     }
 
     boolean shouldDisableSnapshots() {
-        return mIsRunningOnTv || mIsRunningOnIoT || !mSnapshotEnabled;
+        // x86_64 TV tree: task snapshots are enabled for the launcher's recents previews.
+        // Old behavior disabled them on TV entirely; we only keep the explicit
+        // disable config and IoT. Persistence to disk is removed separately in
+        // TaskSnapshotController#getRecordSnapshotSupplier, so snapshots live in
+        // RAM cache only.
+        return mIsRunningOnIoT || !mSnapshotEnabled;
     }
 
     abstract ActivityRecord getTopActivity(TYPE source);
