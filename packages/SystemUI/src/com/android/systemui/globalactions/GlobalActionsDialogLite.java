@@ -773,6 +773,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
                 addIfShouldShowAction(tempActions, getAssistAction());
             } else if (GLOBAL_ACTION_KEY_RESTART.equals(actionKey)) {
                 addIfShouldShowAction(tempActions, restartAction);
+                addIfShouldShowAction(tempActions, new FastRebootAction());
             } else if (GLOBAL_ACTION_KEY_SLEEP.equals(actionKey)) {
 				addIfShouldShowAction(tempActions, new SleepAction());
             } else if (GLOBAL_ACTION_KEY_SCREENSHOT.equals(actionKey)) {
@@ -1113,7 +1114,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
     
     private final class SleepAction extends SinglePressAction implements LongPressAction { 
         private SleepAction() { 
-            super(R.drawable.ic_sleep, R.string.global_action_sleep); 
+            super(R.drawable.ic_sleep, com.android.systemui.res.R.string.global_action_sleep); 
         } 
  
         @Override 
@@ -1252,6 +1253,35 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
             } else {
                 mWindowManagerFuncs.reboot(false, null);
             }
+        }
+    }
+
+    private final class FastRebootAction extends SinglePressAction {
+        private FastRebootAction() {
+            super(com.android.systemui.res.R.drawable.ic_restart_fast,
+                    com.android.systemui.res.R.string.global_action_fast_reboot);
+        }
+
+        @Override
+        public boolean showDuringKeyguard() {
+            return true;
+        }
+
+        @Override
+        public boolean showBeforeProvisioning() {
+            return true;
+        }
+
+        @Override
+        public void onPress() {
+            // don't actually trigger the restart if we are running stability
+            // tests via monkey
+            if (ActivityManager.isUserAMonkey()) {
+                return;
+            }
+            // Soft framework restart: zygote (and everything running on it) is
+            // relaunched while surfaceflinger, HALs and the kernel stay up.
+            SystemProperties.set("ctl.restart", "zygote");
         }
     }
 
